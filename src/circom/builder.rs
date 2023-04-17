@@ -1,4 +1,4 @@
-use ark_ec::pairing::Pairing;
+use ark_ec::PairingEngine;
 use std::{fs::File, path::Path};
 
 use super::{CircomCircuit, R1CS};
@@ -10,20 +10,20 @@ use crate::{circom::R1CSFile, witness::WitnessCalculator};
 use color_eyre::Result;
 
 #[derive(Clone, Debug)]
-pub struct CircomBuilder<E: Pairing> {
+pub struct CircomBuilder<E: PairingEngine> {
     pub cfg: CircomConfig<E>,
     pub inputs: HashMap<String, Vec<BigInt>>,
 }
 
 // Add utils for creating this from files / directly from bytes
 #[derive(Clone, Debug)]
-pub struct CircomConfig<E: Pairing> {
+pub struct CircomConfig<E: PairingEngine> {
     pub r1cs: R1CS<E>,
     pub wtns: WitnessCalculator,
     pub sanity_check: bool,
 }
 
-impl<E: Pairing> CircomConfig<E> {
+impl<E: PairingEngine> CircomConfig<E> {
     pub fn new(wtns: impl AsRef<Path>, r1cs: impl AsRef<Path>) -> Result<Self> {
         let wtns = WitnessCalculator::new(wtns).unwrap();
         let reader = File::open(r1cs)?;
@@ -36,7 +36,7 @@ impl<E: Pairing> CircomConfig<E> {
     }
 }
 
-impl<E: Pairing> CircomBuilder<E> {
+impl<E: PairingEngine> CircomBuilder<E> {
     /// Instantiates a new builder using the provided WitnessGenerator and R1CS files
     /// for your circuit
     pub fn new(cfg: CircomConfig<E>) -> Self {
@@ -81,7 +81,7 @@ impl<E: Pairing> CircomBuilder<E> {
         // sanity check
         debug_assert!({
             use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem};
-            let cs = ConstraintSystem::<E::ScalarField>::new_ref();
+            let cs = ConstraintSystem::<E::Fr>::new_ref();
             circom.clone().generate_constraints(cs.clone()).unwrap();
             let is_satisfied = cs.is_satisfied().unwrap();
             if !is_satisfied {

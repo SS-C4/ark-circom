@@ -3,8 +3,7 @@ use ark_std::rand::thread_rng;
 use color_eyre::Result;
 
 use ark_bn254::Bn254;
-use ark_crypto_primitives::snark::SNARK;
-use ark_groth16::Groth16;
+use ark_groth16::{create_random_proof as prove, generate_random_parameters};
 
 use ethers::{
     contract::ContractError,
@@ -28,12 +27,12 @@ async fn solidity_verifier() -> Result<()> {
     let circom = builder.setup();
 
     let mut rng = thread_rng();
-    let params = Groth16::<Bn254>::generate_random_parameters_with_reduction(circom, &mut rng)?;
+    let params = generate_random_parameters::<Bn254, _, _>(circom, &mut rng)?;
 
     let circom = builder.build()?;
     let inputs = circom.get_public_inputs().unwrap();
 
-    let proof = Groth16::<Bn254>::prove(&params, circom, &mut rng)?;
+    let proof = prove(circom, &params, &mut rng)?;
 
     // launch the network & compile the verifier
     let anvil = Anvil::new().spawn();
